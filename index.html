@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>글로벌 인사 탐험대</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap');
+
+        :root {
+            --primary-color: #ffeb3b;
+            --secondary-color: #4caf50;
+            --accent-color: #ff5722;
+            --bg-color: #e3f2fd;
+            --text-color: #333;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Gaegu', cursive;
+            background: radial-gradient(circle at 15% 15%, #fff9c4 0%, #e3f2fd 40%, #81d4fa 100%);
+            color: var(--text-color);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 시작 화면 */
+        #start-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.8s ease;
+            background: transparent;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 50;
+            transition: opacity 0.8s ease;
+        }
+
+        .title-container {
+            text-align: center;
+            margin-bottom: 50px;
+            pointer-events: none;
+            z-index: 110;
+        }
+
+        h1 {
+            font-size: 5.5rem;
+            color: #1565c0;
+            text-shadow: 3px 3px 0px #fff, 0 0 25px rgba(255, 255, 255, 0.8);
+            margin: 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .subtitle {
+            font-size: 2.2rem;
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .start-btn {
+            padding: 20px 70px;
+            font-size: 2.8rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #bf360c;
+            transition: all 0.2s;
+            z-index: 110;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 0 #bf360c;
+        }
+
+        /* 메인 지도 화면 */
+        #map-screen {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            overflow: hidden;
+            background-color: #e3f2fd;
+        }
+
+        .world-map-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://hatoring.github.io/world/worldmap.png');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .map-header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .map-title {
+            font-size: 3.5rem;
+            color: #000;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+            margin: 0;
+        }
+
+        .instruction {
+            display: inline-block;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 25px;
+            border-radius: 30px;
+            font-size: 1.6rem;
+            color: #1565c0;
+            border: 3px solid #1976d2;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            pointer-events: auto;
+        }
+
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        /* 비행기 설정 */
+        #explorer-plane {
+            position: absolute;
+            width: 50px; 
+            height: 50px;
+            z-index: 50;
+            pointer-events: none;
+            transition: left 1.5s cubic-bezier(0.25, 1, 0.5, 1), 
+                        top 1.5s cubic-bezier(0.25, 1, 0.5, 1), 
+                        transform 0.5s ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .plane-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+        }
+
+        /* 국기 버튼 */
+        .flag-btn {
+            position: absolute;
+            width: 70px;  
+            height: 46px; 
+            border-radius: 8px; 
+            border: 3px solid white;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background-size: cover;
+            background-position: center;
+            z-index: 10;
+        }
+
+        .flag-btn:hover { transform: scale(1.15); z-index: 60; }
+        .flag-btn::after {
+            content: attr(data-name);
+            position: absolute;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.95);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            white-space: nowrap;
+            color: #333;
+            border: 1px solid #ccc;
+            font-weight: bold;
+        }
+
+        /* 국가 위치 설정 */
+        .flag-korea { top: 53%; left: 40.5%; background-image: url('https://flagcdn.com/w160/kr.png'); border-color: #1976d2; }
+        .flag-india { top: 56%; left: 24%; background-image: url('https://flagcdn.com/w160/in.png'); }
+        .flag-thailand { top: 61%; left: 31%; background-image: url('https://flagcdn.com/w160/th.png'); }
+        .flag-france { top: 48%; left: 4%; background-image: url('https://flagcdn.com/w160/fr.png'); }
+        .flag-israel { top: 55%; left: 16%; background-image: url('https://flagcdn.com/w160/il.png'); }
+        .flag-nz { top: 82%; left: 54%; background-image: url('https://flagcdn.com/w160/nz.png'); }
+        .flag-hawaii { top: 56%; left: 60%; background-image: url('https://flagcdn.com/w160/us.png'); }
+        .flag-mexico { top: 55%; left: 74%; background-image: url('https://flagcdn.com/w160/mx.png'); }
+
+        /* 모달 설정 */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal {
+            background: white;
+            width: 90%;
+            max-width: 900px;
+            min-height: 400px;
+            max-height: 90vh;
+            border-radius: 40px;
+            display: flex;
+            position: relative;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 10px solid var(--primary-color);
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .modal-left {
+            flex: 1.2;
+            background-color: #f1f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-right: 8px solid var(--primary-color);
+            padding: 20px;
+        }
+
+        .modal-custom-img { width: 100%; height: 100%; object-fit: contain; border-radius: 15px; }
+
+        .modal-right {
+            flex: 1.5;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            text-align: left;
+            overflow-y: auto;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px; right: 20px;
+            width: 50px; height: 50px;
+            background: #ff5722;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            z-index: 210;
+            box-shadow: 0 4px 0 #bf360c;
+        }
+
+        .modal-flag { width: 110px; border: 2px solid #eee; margin-bottom: 10px; border-radius: 8px; align-self: center; }
+        .modal-country { font-size: 2.8rem; margin: 0 0 25px 0; color: #1976d2; width: 100%; text-align: center; }
+        
+        .info-section {
+            width: 100%;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 20px 25px;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 2px solid #f0f0f0;
+            box-sizing: border-box;
+        }
+
+        .info-label {
+            display: inline-flex;
+            align-items: center;
+            font-size: 1.6rem;
+            font-weight: bold;
+            padding: 5px 18px;
+            border-radius: 18px;
+            margin-bottom: 12px;
+        }
+
+        .label-speech { background-color: #e3f2fd; color: #1565c0; }
+        .label-action { background-color: #f1f8e9; color: #388e3c; }
+
+        .modal-greeting {
+            font-size: 3.2rem;
+            color: var(--accent-color);
+            margin: 0;
+            font-weight: bold;
+            word-break: keep-all;
+            line-height: 1.2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .original-lang {
+            font-size: 2rem; 
+            color: #555;
+            margin-top: 8px;
+            font-weight: normal;
+            display: block;
+            font-family: 'Gaegu', 'Nanum Pen Script', 'Comic Sans MS', cursive, sans-serif;
+            background: rgba(255, 235, 59, 0.2); 
+            padding: 3px 12px;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .modal-desc { 
+            font-size: 2rem; 
+            line-height: 1.5; 
+            color: #444; 
+            word-break: keep-all; 
+            margin: 0;
+        }
+
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .modal { flex-direction: column; max-width: 95%; height: 95vh; border-width: 6px; }
+            .modal-left { height: 180px; flex: none; border-right: none; border-bottom: 6px solid var(--primary-color); }
+            h1 { font-size: 3rem; }
+            .modal-greeting { font-size: 2.5rem; }
+            .original-lang { font-size: 1.6rem; }
+            .modal-desc { font-size: 1.6rem; }
+            .map-title { font-size: 2.2rem; }
+            .instruction { font-size: 1.1rem; }
+            .modal-right { padding: 20px; justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="start-screen">
+        <div class="title-container">
+            <div class="subtitle">지구촌 곳곳의 신기한 인사법!</div>
+            <h1>글로벌 인사 탐험대</h1>
+        </div>
+        <button class="start-btn" onclick="startApp()">탐험 시작!</button>
+    </div>
+
+    <div id="map-screen">
+        <div class="world-map-bg"></div>
+        
+        <div class="map-header">
+            <h2 class="map-title">🔎세계 여러 나라 인사 지도🌍</h2>
+            <div class="instruction">탐험할 나라의 국기를 선택하세요! ✈️</div>
+        </div>
+        
+        <div class="map-container" id="map-container">
+            <div id="explorer-plane">
+                <img src="https://hatoring.github.io/world/8259401.png" alt="비행기" class="plane-img">
+            </div>
+
+            <div class="flag-btn flag-korea" data-name="대한민국" onclick="travelTo('korea')"></div>
+            <div class="flag-btn flag-france" data-name="프랑스" onclick="travelTo('france')"></div>
+            <div class="flag-btn flag-israel" data-name="이스라엘" onclick="travelTo('israel')"></div>
+            <div class="flag-btn flag-india" data-name="인도" onclick="travelTo('india')"></div>
+            <div class="flag-btn flag-thailand" data-name="태국" onclick="travelTo('thailand')"></div>
+            <div class="flag-btn flag-nz" data-name="뉴질랜드" onclick="travelTo('nz')"></div>
+            <div class="flag-btn flag-hawaii" data-name="미국(하와이)" onclick="travelTo('hawaii')"></div>
+            <div class="flag-btn flag-mexico" data-name="멕시코" onclick="travelTo('mexico')"></div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+        <div class="modal">
+            <div class="close-btn" onclick="closeInfo()">×</div>
+            <div class="modal-left">
+                <img src="" alt="인사 모습" class="modal-custom-img" id="modal-custom-img" onerror="this.style.display='none'">
+            </div>
+            <div class="modal-right">
+                <img src="" alt="국기" class="modal-flag" id="modal-flag">
+                <h2 class="modal-country" id="modal-country">국가명</h2>
+                
+                <!-- 인사말 섹션 -->
+                <div class="info-section">
+                    <div class="info-label label-speech">💬 인사말</div>
+                    <div class="modal-greeting" id="modal-greeting">
+                        <span id="greeting-kr">안녕!</span>
+                        <span id="greeting-orig" class="original-lang">(Hello)</span>
+                    </div>
+                </div>
+
+                <!-- 인사방법 섹션 -->
+                <div class="info-section">
+                    <div class="info-label label-action">🙋‍♂️ 인사방법</div>
+                    <p class="modal-desc" id="modal-desc">설명</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, globe;
+
+        function init3D() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const geometry = new THREE.SphereGeometry(2.3, 64, 64);
+            const texture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+            const material = new THREE.MeshPhongMaterial({ map: texture, shininess: 5 });
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+
+            const light = new THREE.DirectionalLight(0xffffff, 1.5);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040, 2));
+
+            camera.position.z = 6;
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (globe) globe.rotation.y += 0.002;
+            renderer.render(scene, camera);
+        }
+
+        const countryData = {
+            korea: { name: "대한민국", greeting: "안녕하세요!", original: "안녕하세요", desc: "허리를 숙여서 정중하게 예의를 표하며 인사해요.", flag: "https://flagcdn.com/w320/kr.png", image: "https://hatoring.github.io/world/korea.png" },
+            india: { name: "인도", greeting: "나마스테", original: "नमस्ते (Namaste)", desc: "두 손을 모으고 고개를 살짝 숙이며 마음을 담아 인사해요.", flag: "https://flagcdn.com/w320/in.png", image: "https://hatoring.github.io/world/india.png" },
+            israel: { name: "이스라엘", greeting: "샬롬", original: "שָׁלוֹם (Shalom)", desc: "어깨를 툭툭 치며 서로의 평화를 빌어주는 따뜻한 인사를 해요.", flag: "https://flagcdn.com/w320/il.png", image: "https://hatoring.github.io/world/israel.png" },
+            france: { name: "프랑스", greeting: "봉쥬르", original: "Bonjour", desc: "친근함의 표시로 양볼을 가볍게 맞대고 소리를 내어 인사해요.", flag: "https://flagcdn.com/w320/fr.png", image: "https://hatoring.github.io/world/france.png" },
+            hawaii: { name: "미국(하와이)", greeting: "알로하", original: "Aloha", desc: "엄지와 새끼손가락을 펴고 손을 흔들며 사랑을 전해요.", flag: "https://flagcdn.com/w320/us.png", image: "https://hatoring.github.io/world/hawaii.png" },
+            nz: { name: "뉴질랜드", greeting: "키 오라", original: "Kia Ora", desc: "마오리족의 전통 방식으로, 서로 코를 살짝 맞대어 인사해요.", flag: "https://flagcdn.com/w320/nz.png", image: "https://hatoring.github.io/world/nz.png" },
+            thailand: { name: "태국", greeting: "사와디캅", original: "สวัสดี (Sawasdee)", desc: "두 손을 합장하고 코 끝이 손가락에 닿을 정도로 숙여 인사해요.", flag: "https://flagcdn.com/w320/th.png", image: "https://hatoring.github.io/world/thailand.png" },
+            mexico: { name: "멕시코", greeting: "올라", original: "¡Hola!", desc: "반가운 친구를 만나면 등을 두드리며 힘차게 포옹을 해요.", flag: "https://flagcdn.com/w320/mx.png", image: "https://hatoring.github.io/world/mexico.png" }
+        };
+
+        let lastX = 0, lastY = 0;
+
+        function startApp() {
+            document.getElementById('start-screen').style.opacity = '0';
+            document.getElementById('canvas-container').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('canvas-container').style.display = 'none';
+                document.getElementById('map-screen').style.display = 'block';
+                movePlane('korea', false);
+            }, 800);
+        }
+
+        function movePlane(countryKey, animate = true) {
+            const plane = document.getElementById('explorer-plane');
+            const target = document.querySelector(`.flag-${countryKey}`);
+            if (!target) return;
+
+            const rect = target.getBoundingClientRect();
+            const mapRect = document.getElementById('map-container').getBoundingClientRect();
+            
+            const targetX = rect.left - mapRect.left + rect.width / 2 - 25;
+            const targetY = rect.top - mapRect.top - 40; 
+
+            if (animate) {
+                const dx = targetX - lastX;
+                const dy = targetY - lastY;
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                
+                plane.style.transform = `rotate(${angle}deg) scale(1.1)`;
+                
+                setTimeout(() => {
+                    plane.style.transform = `rotate(0deg) scale(1)`;
+                }, 1500);
+            }
+
+            plane.style.left = targetX + 'px';
+            plane.style.top = targetY + 'px';
+            
+            lastX = targetX;
+            lastY = targetY;
+        }
+
+        function travelTo(countryKey) {
+            movePlane(countryKey, true);
+            setTimeout(() => {
+                showInfo(countryKey);
+            }, 1600);
+        }
+
+        function showInfo(countryKey) {
+            const data = countryData[countryKey];
+            document.getElementById('modal-flag').src = data.flag;
+            document.getElementById('modal-country').innerText = data.name;
+            document.getElementById('greeting-kr').innerText = data.greeting;
+            document.getElementById('greeting-orig').innerText = data.original;
+            document.getElementById('modal-desc').innerText = data.desc;
+            const customImg = document.getElementById('modal-custom-img');
+            customImg.src = data.image;
+            customImg.style.display = data.image ? 'block' : 'none';
+            document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function closeInfo() {
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        window.onload = init3D;
+        window.onclick = (e) => { if(e.target.id === 'overlay') closeInfo(); };
+    </script>
+</body>
+</html>
